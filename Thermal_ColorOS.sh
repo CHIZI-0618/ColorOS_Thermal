@@ -4,6 +4,7 @@
 
 THERMAL_DIR="/data/adb/Thermal_ColorOS"
 LOG_FILE="$THERMAL_DIR/Thermal.log"
+LOCK_FILE="$THERMAL_DIR/.lock"
 BATT_PATH="/sys/class/power_supply/battery/status"
 TEMP_NODE="/proc/shell-temp"
 THERMAL_PROP="init.svc.thermal-engine"
@@ -32,8 +33,12 @@ handle_event() {
     local event="$1"
     local file="$2"
 
-    exec 9>"$THERMAL_DIR/.lock"
+    # 加锁，防止并发
+    exec 9>"$LOCK_FILE"
     flock -n 9 || exit 0
+
+    # 在退出时自动清理锁文件
+    trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT INT TERM HUP
 
     local status=$(tr -d '\n' < "$file" 2>/dev/null)
 
@@ -52,8 +57,6 @@ handle_event() {
             echo "[$(date '+%m-%d %H:%M:%S')] ❓ 未识别状态: $status" >> "$LOG_FILE"
             ;;
     esac
-
-    flock -u 9
 }
 
 if [ "$1" = "w" ] || [ "$1" = "m" ]; then
@@ -64,7 +67,8 @@ fi
 while [ ! -r "$BATT_PATH" ]; do
     sleep 2
 done
+
 echo "[$(date '+%m-%d %H:%M:%S')] 🔧 启动电池状态监控..." >> "$LOG_FILE"
 handle_event "startup" "$BATT_PATH"
 
-inotifyd "$0":"$BATT_PATH":w 2>>"$LOG_FILE" &
+inotifyd "$0":"$BATT_PATH":w 2>>"$LOG_FILE"
