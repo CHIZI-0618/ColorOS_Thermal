@@ -1,0 +1,2 @@
+# coloros_thermal_manager
+coloros_thermal_manager
