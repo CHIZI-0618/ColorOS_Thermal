@@ -65,10 +65,6 @@ update_module_prop() {
 handle_status_change() {
     local status="$1"
 
-    exec 9>"$LOCK_FILE"
-    flock -n 9 || exit 0
-    trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT INT TERM HUP
-
     case "$status" in
         "Charging")
             control_temp_node "Charging"
