@@ -1,6 +1,7 @@
 #!/system/bin/sh
 # Thermal control daemon for ColorOS
 # 仅监控充电与放电状态，自动控制 thermal-engine 与温度节点
+# 使用轻量轮询方式，放弃 inotifyd，避免 sysfs 高频事件
 
 THERMAL_DIR="/data/adb/Thermal_ColorOS"
 LOG_FILE="$THERMAL_DIR/Thermal.log"
@@ -8,6 +9,7 @@ LOCK_FILE="$THERMAL_DIR/.lock"
 BATT_PATH="/sys/class/power_supply/battery/status"
 TEMP_NODE="/proc/shell-temp"
 THERMAL_PROP="init.svc.thermal-engine"
+INTERVAL=5
 
 mkdir -p "$THERMAL_DIR" 2>/dev/null
 [ -f "$LOG_FILE" ] || touch "$LOG_FILE"
@@ -29,16 +31,12 @@ control_temp_node() {
     done
 }
 
-handle_event() {
-    local event="$1"
-    local file="$2"
+handle_status_change() {
+    local status="$1"
 
     exec 9>"$LOCK_FILE"
     flock -n 9 || exit 0
-
     trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT INT TERM HUP
-
-    local status=$(tr -d '\n' < "$file" 2>/dev/null)
 
     case "$status" in
         "Charging")
@@ -57,16 +55,20 @@ handle_event() {
     esac
 }
 
-if [ "$1" = "w" ] || [ "$1" = "m" ]; then
-    handle_event "$@"
-    exit 0
-fi
-
 while [ ! -r "$BATT_PATH" ]; do
     sleep 2
 done
 
 echo "[$(date '+%m-%d %H:%M:%S')] 🔧 启动电池状态监控..." >> "$LOG_FILE"
-handle_event "startup" "$BATT_PATH"
 
-inotifyd "$0" "$BATT_PATH":w 2>>"$LOG_FILE"
+last_status=""
+while true; do
+    current_status=$(tr -d '\n' < "$BATT_PATH" 2>/dev/null)
+
+    if [ "$current_status" != "$last_status" ] && [ -n "$current_status" ]; then
+        handle_status_change "$current_status"
+        last_status="$current_status"
+    fi
+
+    sleep "$INTERVAL"
+done

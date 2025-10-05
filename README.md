@@ -1,2 +1,1 @@
-# coloros_thermal_manager
-coloros_thermal_manager
+# ColorOS Thermal Control
