@@ -70,7 +70,7 @@ done
 
 echo "[$(date '+%m-%d %H:%M:%S')] 🔧 启动电池状态监控..." >> "$LOG_FILE"
 
-last_status=""
+last_status="Discharging"
 while true; do
     current_status=$(tr -d '\n' < "$BATT_PATH" 2>/dev/null)
 
