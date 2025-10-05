@@ -3,12 +3,13 @@
 # 仅监控充电与放电状态，自动控制 thermal-engine 与温度节点
 # 使用轻量轮询方式，放弃 inotifyd，避免 sysfs 高频事件
 
-THERMAL_DIR="/data/adb/Thermal_ColorOS"
+THERMAL_DIR="${0%/*}"
 LOG_FILE="$THERMAL_DIR/Thermal.log"
 LOCK_FILE="$THERMAL_DIR/.lock"
 BATT_PATH="/sys/class/power_supply/battery/status"
 TEMP_NODE="/proc/shell-temp"
 THERMAL_PROP="init.svc.thermal-engine"
+MODULE_PROP="$THERMAL_DIR/module.prop"
 INTERVAL=5
 
 mkdir -p "$THERMAL_DIR" 2>/dev/null
@@ -31,6 +32,11 @@ control_temp_node() {
     done
 }
 
+update_module_prop() {
+    local desc="$1"
+    [ -f "$MODULE_PROP" ] && sed -i "s|^description=.*|description=${desc}|" "$MODULE_PROP"
+}
+
 handle_status_change() {
     local status="$1"
 
@@ -43,14 +49,17 @@ handle_status_change() {
             control_temp_node "Charging"
             control_thermal "stop"
             echo "[$(date '+%m-%d %H:%M:%S')] ⚡ 充电中: 禁用温控" >> "$LOG_FILE"
+            update_module_prop "⚡ 充电中: 禁用温控"
             ;;
         "Discharging")
             control_temp_node "Discharging"
             control_thermal "start"
             echo "[$(date '+%m-%d %H:%M:%S')] 🔋 放电中: 恢复温控" >> "$LOG_FILE"
+            update_module_prop "🔋 放电中: 恢复温控"
             ;;
         *)
             echo "[$(date '+%m-%d %H:%M:%S')] ❓ 未识别状态: $status" >> "$LOG_FILE"
+            update_module_prop "动态温控｜未知状态: ${status}"
             ;;
     esac
 }
