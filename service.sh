@@ -42,12 +42,12 @@ handle_status_change() {
         "Charging")
             control_temp_node "Charging"
             control_thermal "stop"
-            echo "[$(date '+%m-%d %H:%M:%S')] ⚡ 充电中: 禁用温控, 启用快充模式" >> "$LOG_FILE"
+            echo "[$(date '+%m-%d %H:%M:%S')] ⚡ 充电中: 禁用温控" >> "$LOG_FILE"
             ;;
         "Discharging")
             control_temp_node "Discharging"
             control_thermal "start"
-            echo "[$(date '+%m-%d %H:%M:%S')] 🔋 放电中: 恢复默认温控" >> "$LOG_FILE"
+            echo "[$(date '+%m-%d %H:%M:%S')] 🔋 放电中: 恢复温控" >> "$LOG_FILE"
             ;;
         *)
             echo "[$(date '+%m-%d %H:%M:%S')] ❓ 未识别状态: $status" >> "$LOG_FILE"
