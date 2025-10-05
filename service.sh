@@ -2,6 +2,7 @@
 # Thermal control daemon for ColorOS
 # 仅监控充电与放电状态，自动控制 thermal-engine 与温度节点
 # 使用轻量轮询方式，放弃 inotifyd，避免 sysfs 高频事件
+# 增强：防止系统自动恢复温控或重置温度节点
 
 THERMAL_DIR="${0%/*}"
 LOG_FILE="$THERMAL_DIR/Thermal.log"
@@ -11,7 +12,7 @@ TEMP_NODE="/proc/shell-temp"
 THERMAL_PROP="init.svc.thermal-engine"
 MODULE_PROP="$THERMAL_DIR/module.prop"
 FAKE_TEMP_DIR="$THERMAL_DIR/thermal_fake_temp"
-INTERVAL=5
+INTERVAL=2
 
 mkdir -p "$THERMAL_DIR" "$FAKE_TEMP_DIR" 2>/dev/null
 [ -f "$LOG_FILE" ] || touch "$LOG_FILE"
@@ -95,6 +96,14 @@ echo "[$(date '+%m-%d %H:%M:%S')] 🔧 启动电池状态监控..." >> "$LOG_FIL
 last_status="Discharging"
 while true; do
     current_status=$(tr -d '\n' < "$BATT_PATH" 2>/dev/null)
+
+    # 若系统尝试恢复温控服务，则强制关闭
+    if [ "$current_status" = "Charging" ] && [ "$(getprop $THERMAL_PROP)" = "running" ]; then
+        setprop ctl.stop thermal-engine
+    fi
+
+    # 周期性强制写入温度节点防止系统覆盖
+    [ "$current_status" = "Charging" ] && control_temp_node "Charging"
 
     if [ "$current_status" != "$last_status" ] && [ -n "$current_status" ]; then
         handle_status_change "$current_status"
