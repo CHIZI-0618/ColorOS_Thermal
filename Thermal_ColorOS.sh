@@ -33,11 +33,9 @@ handle_event() {
     local event="$1"
     local file="$2"
 
-    # 加锁，防止并发
     exec 9>"$LOCK_FILE"
     flock -n 9 || exit 0
 
-    # 在退出时自动清理锁文件
     trap 'flock -u 9; rm -f "$LOCK_FILE"' EXIT INT TERM HUP
 
     local status=$(tr -d '\n' < "$file" 2>/dev/null)
@@ -71,4 +69,4 @@ done
 echo "[$(date '+%m-%d %H:%M:%S')] 🔧 启动电池状态监控..." >> "$LOG_FILE"
 handle_event "startup" "$BATT_PATH"
 
-inotifyd "$0":"$BATT_PATH":w 2>>"$LOG_FILE"
+inotifyd "$0" "$BATT_PATH":w 2>>"$LOG_FILE"
