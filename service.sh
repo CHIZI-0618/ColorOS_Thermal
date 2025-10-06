@@ -64,7 +64,7 @@ while [ ! -r "$BATT_PATH" ]; do
     sleep 2
 done
 
-echo "[$(date '+%m-%d %H:%M:%S')] 🔧 启动电池状态监控..." >> "$LOG_FILE"
+echo "[$(date '+%m-%d %H:%M:%S')] 🔧 启动电池状态监控..." > "$LOG_FILE"
 
 last_status="Discharging"
 while true; do
@@ -78,7 +78,7 @@ while true; do
     # 周期性强制写入温度节点防止系统覆盖
     [ "$current_status" = "Charging" ] && control_temp_node "Charging"
 
-    if [ "$current_status" != "$last_status" ] && [ -n "$current_status" ]; then
+    if [ -n "$current_status" ] && [ "$current_status" != "$last_status" ]; then
         handle_status_change "$current_status"
         last_status="$current_status"
     fi
