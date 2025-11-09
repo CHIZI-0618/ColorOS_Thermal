@@ -10,7 +10,7 @@ BATT_PATH="/sys/class/power_supply/battery/status"
 TEMP_NODE="/proc/shell-temp"
 THERMAL_PROP="init.svc.thermal-engine"
 MODULE_PROP="$THERMAL_DIR/module.prop"
-INTERVAL=5
+INTERVAL=2
 
 mkdir -p "$THERMAL_DIR" 2>/dev/null
 [ -f "$LOG_FILE" ] || touch "$LOG_FILE"
@@ -52,10 +52,6 @@ handle_status_change() {
             control_thermal "start"
             echo "[$(date '+%m-%d %H:%M:%S')] 🔋 放电中: 恢复温控" >> "$LOG_FILE"
             update_module_prop "🔋 放电中: 恢复温控"
-            ;;
-        *)
-            echo "[$(date '+%m-%d %H:%M:%S')] ❓ 未识别状态: $status" >> "$LOG_FILE"
-            update_module_prop "动态温控｜未知状态: ${status}"
             ;;
     esac
 }
